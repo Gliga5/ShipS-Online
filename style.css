@@ -1,0 +1,22 @@
+canvas {
+    width: 1280;
+    height: 720;
+    border-style: solid;
+    border-width: 3px;
+    border-color: black;
+}
+
+html, body {
+    height: 100%;
+  }
+  
+  body {
+    margin: 0;
+    display: flex;
+  
+    /* This centers our sketch horizontally. */
+    justify-content: center;
+  
+    /* This centers our sketch vertically. */
+    align-items: center;
+  }
