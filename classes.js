@@ -1,6 +1,6 @@
 class Sockets {
     constructor() {
-        socket = io("ws://fa05d83f9b7f.eu.ngrok.io");
+        socket = io("http://fa05d83f9b7f.eu.ngrok.io");
 
         socket.on('invRoom' , () => {
             console.log("Invalid Room");
