@@ -1,88 +1,94 @@
+/*
+ShipS Online v0.1 BETA >> v0.2 BETA
+-Ships
+-Smrt igraca ali spectate
+-Game Over / "Plavi" je pobjedio
+
+ShipS Online v0.2 BETA >> v1.0
+-Imena?
+-Laseri piju piju
+-Random Ships size
+-LeaderBoards
+*/
+
+
 let player;
 let others = [];
 let ships = [];
-
 let stars = [];
-let width = 1280;
-let height = 720;
+
+let width = 1920;
+let height = 1080;
+let canvasW = innerWidth;
+let canvasH = innerHeight;
+let p5canvas;
+
+let create = false;
+let join = false;
+let input = "";
+let roomID;
+
+let ingame = false;
+let online = 0;
 
 let socket;
-let connected = false;
+
+function resizeC() {
+    canvasW = innerWidth;
+    canvasH = innerHeight;
+
+    let RATIO = 16 / 9;
+    if (canvasH < canvasW / RATIO) {
+        canvasW = canvasH * RATIO;
+    }else {
+        canvasH = canvasW / RATIO;
+    }
+
+    p5canvas.canvas.style.width = ''+canvasW+'px';
+    p5canvas.canvas.style.height = ''+canvasH+'px';
+}
+
+function windowResized() {
+    resizeC();
+}
 
 function setup() {
-    createCanvas(width, height);
+    p5canvas = createCanvas(width, height);
+    resizeC();
+
     player = new Player({r:random(50,255),g:random(50,255),b:random(50,255)});
-    player.init();
-    for (let i = 0; i < 200; i++) {
+    
+    noSmooth();
+    for (let i = 0; i < 300; i++) {
         stars.push(new Star());
     }
 
-    ship = new Ship(300,300);
-
-    socket = io("ws://localhost:8080");
-
-    socket.emit('newPlayer', player);
-
-    socket.on('newPlayer', player => {
-        connected = true;
-        if (Array.isArray(player)) {
-            for (const other of player) {
-                others.push(new Player(other.color,other.x,other.y,other.id));
-            }
-            return;
-        }
-        others.push(new Player(player.color,player.x,player.y,player.id));
-    });
-
-    socket.on('updatePlayer', player => {
-        let other = others.find(e => e.id === player.id);
-        if (other != null) {
-            other.x = player.x;
-            other.y = player.y;
-        }
-    });
-
-    socket.on('delPlayer', id => {
-        let other = others.find(e => e.id === id);
-        if (other != null) {
-            others.splice(others.indexOf(other), 1);
-        }
-
-    });
-
-    socket.on('Ship', SHIPS => {
-        ships = [];
-        for (const ship of SHIPS) {
-            ships.push(new Ship(ship.x,ship.y));
-        }
-    });
+    new Sockets();
 }
   
 function draw() {
     background(35);
+    noSmooth();
 
     for (const star of stars) {
         star.display();
         if (star.y > height+star.r) {
-            star.r = random(1, 5);
-            star.speed = star.r/5;
+            star.r = random(1, 6);
+            star.speed = star.r/6;
             star.x = random(0, width);
             star.y = -star.r;
         }
     }
 
-    if (!connected) {
-        push();
-
-        textSize(100);
-        textAlign(CENTER);
-        fill(255);
-        stroke(0);
-        strokeWeight(5);
-        text('CONNECTING...', width/2, height/2);
-
-        pop();
-    }else {
+    if (!ingame) {
+        if (create) {
+            new CreateRoom();
+        }else if (join) {
+            new JoinRoom(input);
+        }else {
+            new MainMenu(input);
+        }
+    }else if (ingame) {
         for (const ship of ships) {
             ship.display(); 
         }
@@ -93,5 +99,75 @@ function draw() {
     
         player.display(mouseX,mouseY);
         socket.emit('updatePlayer', player);
+
+        push();
+
+        textSize(50);
+        textAlign(CENTER);
+        stroke(0);
+        fill(255);
+        strokeWeight(5);
+        text(`Room: ${roomID}`, width/2, height-30);
+
+        pop();
     }
+}
+
+function mousePressed() {
+    if (create) {
+        if (isMouseInsideText("Back", 110 , height-30)) {
+            create = false;
+        }else if (isMouseInsideText("Create", width/2 , height/2+200)) {
+            socket.emit('newPlayer', player, parseInt(input));
+        }
+    }else if (join) {
+        if (isMouseInsideText("Back", 110 , height-30)) {
+            join = false;
+        }else if (isMouseInsideText("Join", width/2 , height/2+200)) {
+            socket.emit('newPlayer', player, input);
+        }
+    }else {
+        if (isMouseInsideText("Create Room", width/2, height/2)) {
+            input = '';
+            create = true;
+        }else if (isMouseInsideText("Join Room", width/2, height/2+150)) {
+            input = '';
+            join = true;
+        }
+    }
+}
+
+function keyPressed() {
+    if (keyCode === ESCAPE) {
+        if (create) create = false;
+        else if (join) join = false;
+    }
+    if (keyCode === ENTER) {
+        if (create) socket.emit('newPlayer', player, parseInt(input));
+        else if (join) socket.emit('newPlayer', player, input);
+    }
+    if (keyCode === BACKSPACE) {
+        input = input.slice(0,-1);
+    }
+}
+
+function keyTyped() {
+    if (create && !Number.isNaN(parseInt(key))) {
+        input += key;
+    }else if (join && input.length < 6 && ((key.match(/[a-zA-Z]/g) && key.match(/[a-zA-Z]/g).length === 1) || !Number.isNaN(parseInt(key)))) {
+        input += key.toUpperCase();
+    }
+}
+
+function isMouseInsideText(message, messageX, messageY) {
+    push();
+
+    textSize(75);
+    const messageWidth = textWidth(message);
+    const messageTop = messageY - textAscent();
+    const messageBottom = messageY + textDescent();
+    pop();
+  
+    return mouseX > messageX - messageWidth/2  && mouseX < messageX + messageWidth/2 &&
+      mouseY > messageTop && mouseY < messageBottom;
 }

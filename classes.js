@@ -1,13 +1,56 @@
+class Sockets {
+    constructor() {
+        socket = io("ws://localhost:8080");
+
+        socket.on('invRoom' , () => {
+            console.log("Invalid Room");
+        });
+
+        socket.on('newPlayer', (player,ID) => {
+            roomID = ID;
+            ingame = true;
+            if (Array.isArray(player)) {
+                for (const other of player) {
+                    others.push(new Player(other.color,other.x,other.y,other.id));
+                }
+                return;
+            }
+            others.push(new Player(player.color,player.x,player.y,player.id));
+        });
+
+        socket.on('updatePlayer', player => {
+            let other = others.find(e => e.id === player.id);
+            if (other != null) {
+                other.x = player.x;
+                other.y = player.y;
+            }
+        });
+
+        socket.on('delPlayer', id => {
+            let other = others.find(e => e.id === id);
+            if (other != null) {
+                others.splice(others.indexOf(other), 1);
+            }
+
+        });
+
+        socket.on('Ship', SHIPS => {
+            ships = [];
+            for (const ship of SHIPS) {
+                ships.push(new Ship(ship.x,ship.y));
+            }
+        });
+    }
+}
+
 class Player {
     constructor(color,x=0,y=0,id=null) {
         this.id = id;
         this.x = x;
         this.y = y;
         this.color = color;
-        this.r = 25;
+        this.r = 35;
         this.trails = [];
-    }
-    init() {
         for (let i = 0; i < 7; i++) {
             this.trails.push({x: this.x, y: this.y});
         }
@@ -36,7 +79,7 @@ class Player {
             fill(this.color.r, this.color.g, this.color.b);
             rectMode(CENTER);
             strokeWeight(0.5);
-            rect(trail.x, trail.y, random(0, 15), random(0, 15));
+            rect(trail.x, trail.y, random(0, 21), random(0, 21));
         }
         
         pop();
@@ -47,8 +90,8 @@ class Star {
     constructor() {
         this.x = random(0,width);
         this.y = random(0,height);
-        this.r = random(1,5);
-        this.speed = this.r/5;
+        this.r = random(1,6);
+        this.speed = this.r/6;
     }
     display() {
         push();
@@ -69,15 +112,6 @@ class Ship {
         this.y = y;
         this.r = 42;
     }
-    intersects(other) {
-        var d = dist(this.x, this.y, other.x, other.y);
-        
-        if (d < this.r + other.r) {
-            return true;
-        }else {
-            return false;
-        }
-    }
     display() {
         push();
 
@@ -91,6 +125,69 @@ class Ship {
         rect(this.x - 40, this.y, 20, 50);
         rect(this.x + 40, this.y, 20, 50);
 
+        pop();
+    }
+}
+
+class MainMenu {
+    constructor() {
+        push();
+        
+        textAlign(CENTER);
+        textSize(125);
+        stroke(0);
+        fill(255);
+        strokeWeight(10);
+        text("ShipS Online", width/2, 200);
+
+        textSize(75);
+        stroke(0);
+        fill(255);
+        strokeWeight(8);
+        text("Create Room", width/2, height/2);
+
+        textSize(75);
+        stroke(0);
+        fill(255);
+        strokeWeight(8);
+        text("Join Room", width/2, height/2+150);
+
+        pop();
+    }
+}
+
+class CreateRoom {
+    constructor() {
+        push();
+
+        textSize(75);
+        textAlign(CENTER);
+        stroke(0);
+        fill(255);
+        strokeWeight(7);
+        text("Back", 110 , height-30);
+        text("Room size: ", width/2 , height/2-100);
+        text(input, width/2 , height/2);
+        text("Create", width/2 , height/2+200);
+
+        pop();
+    }
+}
+
+class JoinRoom {
+    constructor(input) {
+        push();
+
+        textSize(75);
+        textAlign(CENTER);
+        stroke(0);
+        fill(255);
+        strokeWeight(7);
+        text("Back", 110 , height-30);
+        text("Room ID: ", width/2 , height/2-100);
+        text(input, width/2 , height/2);
+        text("Join", width/2 , height/2+200);
+        
         pop();
     }
 }
